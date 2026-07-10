@@ -156,8 +156,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
     <div className="min-h-dvh bg-bg">
       <SideNav />
       <MobileHeader />
-      <main className="mx-auto w-full max-w-6xl px-4 pb-28 pt-6 sm:px-6 lg:pb-12 lg:pl-68 lg:pt-10 xl:pl-72">
-        {children}
+      <main className="w-full px-4 pb-28 pt-6 sm:px-6 lg:ml-60 lg:w-[calc(100%-15rem)] lg:px-8 lg:pb-12 lg:pt-10 xl:px-10">
+        <div className="mx-auto w-full max-w-6xl">{children}</div>
       </main>
       <ResumeWorkoutBar />
       <BottomNav />
