@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import App from '@/App'
 import { AppDataProvider } from '@/state/AppDataContext'
 import { ToastProvider } from '@/state/ToastContext'
-import { MemoryAdapter } from '@/lib/storage'
+import { MemoryAdapter, StorageError, type StorageAdapter } from '@/lib/storage'
 import { buildDemoData } from '@/data/demoData'
 
 function renderApp(route: string) {
@@ -62,5 +62,27 @@ describe('app smoke', () => {
   it('shows a friendly 404 for unknown routes', async () => {
     renderApp('/nope')
     expect(await screen.findByText('Page not found')).toBeInTheDocument()
+  })
+
+  it('shows a global warning when browser persistence fails', async () => {
+    const failingAdapter: StorageAdapter = {
+      load: () => null,
+      save: () => {
+        throw new StorageError('Pulse could not save this change. Export JSON before closing the tab.')
+      },
+      clear: () => undefined,
+    }
+
+    render(
+      <AppDataProvider adapter={failingAdapter}>
+        <ToastProvider>
+          <MemoryRouter>
+            <App />
+          </MemoryRouter>
+        </ToastProvider>
+      </AppDataProvider>,
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/export JSON before closing/i)
   })
 })

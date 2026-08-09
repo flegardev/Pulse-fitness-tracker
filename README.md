@@ -70,7 +70,7 @@ immediately. Clear or reload it anytime in **Settings → Data**.
 | `npm run preview`   | Serve the production build                        |
 | `npm run typecheck` | TypeScript project check (strict)                 |
 | `npm run lint`      | ESLint (typescript-eslint + react-hooks)          |
-| `npm test`          | Vitest — 59 tests (domain logic + app smoke)      |
+| `npm test`          | Vitest — 65 tests (domain logic + app smoke)      |
 | `npm run check`     | All of the above, in order                        |
 
 Dev utilities (need the app running, use system Chrome):
@@ -96,9 +96,13 @@ src/
 Design decisions worth knowing:
 
 - **Storage is a one-file swap.** Everything persists through the `StorageAdapter` interface
-  (`src/lib/storage.ts`) as a single versioned document with a migration hook and corrupt-data
+  (`src/lib/storage.ts`) as a single versioned document with a strict version guard and corrupt-data
   quarantine. Replacing localStorage with IndexedDB or a real backend API touches only that
   boundary.
+- **Persistence failures are visible.** If storage is blocked or full, Pulse keeps the active
+  session in memory and shows a global warning to export JSON before closing the tab.
+- **Imports fail closed by version.** Version 1 backups are validated field by field; newer or
+  unsupported versions are rejected instead of being silently coerced into the current schema.
 - **All stats are derived, never stored.** Streaks, records, weekly volume, and goal progress
   are recomputed from the workout log, so they can't drift out of sync.
 - **Canonical units internally** (kg, km, cm, seconds); conversion happens only at the
@@ -119,12 +123,12 @@ Design decisions worth knowing:
 
 1. Backend sync: implement a `StorageAdapter` against an API (or Supabase/Firebase), add auth,
    and reconcile with local data for offline-first behavior.
-2. JSON import to complement export; per-device merge strategy.
+2. Define explicit migrations for future backup versions and a per-device merge strategy.
 3. PWA manifest + service worker for installability and true offline.
 4. Routine templates, supersets, plate calculator, exercise charts per lift.
 5. Notifications for rest timer and workout reminders.
-6. E2E tests in CI (the `scripts/flows.mjs` scenario, ported to Playwright Test).
+6. Port the existing browser-flow utilities to Playwright Test for hosted CI.
 
 ---
 
-Made by FlegarTech. If this project helped you, you can [support development](https://paypal.me/TiniFlegar).
+Built by **Tini Flegar** — Full-Stack Developer · IT & Finance. Contact: [flegardev@gmail.com](mailto:flegardev@gmail.com).

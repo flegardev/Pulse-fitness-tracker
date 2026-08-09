@@ -1,5 +1,12 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { LocalStorageAdapter, MemoryAdapter, STORAGE_KEY, exportFileName, parseAppDataJson } from '@/lib/storage'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  LocalStorageAdapter,
+  MemoryAdapter,
+  STORAGE_KEY,
+  StorageError,
+  exportFileName,
+  parseAppDataJson,
+} from '@/lib/storage'
 import { emptyAppData } from '@/types'
 import { buildDemoData } from '@/data/demoData'
 
@@ -22,17 +29,17 @@ describe('LocalStorageAdapter', () => {
     expect(new LocalStorageAdapter().load()).toBeNull()
   })
 
-  it('quarantines corrupt JSON instead of crashing', () => {
+  it('quarantines corrupt JSON and reports that recovery state', () => {
     localStorage.setItem(STORAGE_KEY, '{not json')
     const adapter = new LocalStorageAdapter()
-    expect(adapter.load()).toBeNull()
+    expect(() => adapter.load()).toThrow(StorageError)
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull()
     expect(localStorage.getItem('pulse:data:corrupt-backup')).toBe('{not json')
   })
 
   it('rejects well-formed JSON with the wrong shape', () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ hello: 'world' }))
-    expect(new LocalStorageAdapter().load()).toBeNull()
+    expect(() => new LocalStorageAdapter().load()).toThrow(StorageError)
   })
 
   it('drops malformed nested records instead of crashing', () => {
@@ -55,6 +62,14 @@ describe('LocalStorageAdapter', () => {
     adapter.save(emptyAppData())
     adapter.clear()
     expect(adapter.load()).toBeNull()
+  })
+
+  it('reports a blocked write instead of silently accepting it', () => {
+    const blocked = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('blocked', 'QuotaExceededError')
+    })
+    expect(() => new LocalStorageAdapter().save(emptyAppData())).toThrow(/could not save/i)
+    blocked.mockRestore()
   })
 })
 
@@ -83,5 +98,10 @@ describe('parseAppDataJson', () => {
 
   it('rejects non-Pulse JSON', () => {
     expect(() => parseAppDataJson(JSON.stringify({ hello: 'world' }))).toThrow(/missing required/i)
+  })
+
+  it('rejects future backups rather than coercing them to the current schema', () => {
+    const future = { ...buildDemoData(), version: 99 }
+    expect(() => parseAppDataJson(JSON.stringify(future))).toThrow(/newer Pulse data version 99/i)
   })
 })

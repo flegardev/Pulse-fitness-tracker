@@ -22,6 +22,8 @@ export interface AppDataApi {
   resolveExercise: (id: string) => Exercise | undefined
   /** Latest logged body weight, falling back to a sensible default for estimates. */
   bodyWeightKg: number
+  persistenceError: string | null
+  dismissPersistenceError: () => void
 
   updateProfile: (patch: Partial<Profile>) => void
 
@@ -72,22 +74,39 @@ export function AppDataProvider({
   initialData?: AppData
 }) {
   const [storage] = useState<StorageAdapter>(() => adapter ?? new LocalStorageAdapter())
-  const [data, setData] = useState<AppData>(() => {
-    if (initialData) return initialData
-    const stored = storage.load()
-    if (stored) return stored
-    // First run: seed the demo dataset so the product is alive immediately.
+  const [state, setState] = useState<{ data: AppData; persistenceError: string | null }>(() => {
+    if (initialData) return { data: initialData, persistenceError: null }
+    let persistenceError: string | null = null
+    try {
+      const stored = storage.load()
+      if (stored) return { data: stored, persistenceError: null }
+    } catch (error) {
+      persistenceError = error instanceof Error ? error.message : 'Pulse could not read browser storage.'
+    }
+
     const demo = buildDemoData()
-    storage.save(demo)
-    return demo
+    try {
+      storage.save(demo)
+    } catch (error) {
+      persistenceError = error instanceof Error ? error.message : 'Pulse could not save browser data.'
+    }
+    return { data: demo, persistenceError }
   })
+  const { data } = state
 
   const update = useCallback(
     (mutate: (d: AppData) => AppData) => {
-      setData((prev) => {
-        const next = mutate(prev)
-        storage.save(next)
-        return next
+      setState((previous) => {
+        const next = mutate(previous.data)
+        try {
+          storage.save(next)
+          return { data: next, persistenceError: null }
+        } catch (error) {
+          return {
+            data: next,
+            persistenceError: error instanceof Error ? error.message : 'Pulse could not save browser data.',
+          }
+        }
       })
     },
     [storage],
@@ -119,6 +138,8 @@ export function AppDataProvider({
       exercises,
       resolveExercise,
       bodyWeightKg,
+      persistenceError: state.persistenceError,
+      dismissPersistenceError: () => setState((current) => ({ ...current, persistenceError: null })),
 
       updateProfile: (patch) =>
         update((d) => ({ ...d, profile: { ...(d.profile ?? defaultProfile()), ...patch } })),
@@ -161,7 +182,7 @@ export function AppDataProvider({
       exportJson: () => JSON.stringify(data, null, 2),
       dismissWelcome: () => update((d) => ({ ...d, meta: { ...d.meta, welcomeDismissed: true } })),
     }),
-    [data, exercises, resolveExercise, bodyWeightKg, update],
+    [data, state.persistenceError, exercises, resolveExercise, bodyWeightKg, update],
   )
 
   return <AppDataContext.Provider value={api}>{children}</AppDataContext.Provider>

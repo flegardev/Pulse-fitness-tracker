@@ -10,17 +10,9 @@
       name="description"
       content="Pulse — a fast, private fitness tracker for workouts, progress, body metrics, and goals."
     />
+    <meta name="author" content="Tini Flegar" />
     <title>Pulse — Fitness Tracker</title>
-    <script>
-      // Apply saved theme before first paint to avoid a flash of the wrong mode.
-      try {
-        var raw = localStorage.getItem('pulse:data');
-        var theme = raw ? JSON.parse(raw).profile?.theme : null;
-        document.documentElement.classList.toggle('dark', theme !== 'light');
-      } catch (e) {
-        /* default dark stays */
-      }
-    </script>
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

@@ -10,6 +10,8 @@ import {
   Play,
   Settings,
   Target,
+  TriangleAlert,
+  X,
 } from 'lucide-react'
 import { useAppData } from '@/state/AppDataContext'
 import { formatClock } from '@/lib/format'
@@ -146,6 +148,7 @@ function ResumeWorkoutBar() {
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const location = useLocation()
+  const { persistenceError, dismissPersistenceError } = useAppData()
 
   // New page → start at the top (mirrors native app behavior).
   useEffect(() => {
@@ -157,7 +160,21 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <SideNav />
       <MobileHeader />
       <main className="w-full px-4 pb-28 pt-6 sm:px-6 lg:ml-60 lg:w-[calc(100%-15rem)] lg:px-8 lg:pb-12 lg:pt-10 xl:px-10">
-        <div className="mx-auto w-full max-w-6xl">{children}</div>
+        <div className="mx-auto w-full max-w-6xl">
+          {persistenceError ? (
+            <div className="mb-5 flex items-start gap-3 rounded-xl border border-warning/50 bg-warning/10 p-4 text-sm text-ink" role="alert">
+              <TriangleAlert className="mt-0.5 size-5 shrink-0 text-warning" aria-hidden />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold">Browser storage is unavailable</p>
+                <p className="mt-0.5 text-soft">{persistenceError}</p>
+              </div>
+              <button type="button" onClick={dismissPersistenceError} aria-label="Dismiss storage warning" className="rounded-md p-1 text-soft hover:text-ink">
+                <X className="size-4" aria-hidden />
+              </button>
+            </div>
+          ) : null}
+          {children}
+        </div>
       </main>
       <ResumeWorkoutBar />
       <BottomNav />

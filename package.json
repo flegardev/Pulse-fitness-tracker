@@ -2,6 +2,7 @@
   "name": "pulse-fitness",
   "private": true,
   "version": "1.0.0",
+  "author": "Tini Flegar <flegardev@gmail.com>",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -18,7 +19,7 @@
     "lucide-react": "^1.17.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-router-dom": "^7.17.0"
+    "react-router-dom": "^7.18.2"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

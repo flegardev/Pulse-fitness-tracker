@@ -361,14 +361,9 @@ export default function SettingsPage() {
           Pulse v1.0 — private by design: no account, no servers, your data never leaves this device.
         </p>
         <p className="text-center text-xs text-faint/60">
-          Made by FlegarTech.{' '}
-          <a
-            href="https://paypal.me/TiniFlegar"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-2 hover:text-faint"
-          >
-            Support development
+          Built by Tini Flegar ·{' '}
+          <a href="mailto:flegardev@gmail.com" className="underline underline-offset-2 hover:text-faint">
+            flegardev@gmail.com
           </a>
         </p>
       </div>

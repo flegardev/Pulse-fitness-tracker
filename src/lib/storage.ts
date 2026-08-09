@@ -29,6 +29,13 @@ export interface StorageAdapter {
   clear(): void
 }
 
+export class StorageError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options)
+    this.name = 'StorageError'
+  }
+}
+
 const EXERCISE_METRICS: ExerciseMetric[] = ['weight-reps', 'reps', 'duration', 'distance-duration']
 const WORKOUT_STATUSES: Workout['status'][] = ['planned', 'active', 'completed']
 const ACTIVITY_LEVELS: ActivityLevel[] = ['sedentary', 'light', 'moderate', 'active', 'athlete']
@@ -172,12 +179,6 @@ function parseGoal(value: unknown): Goal | null {
   return null
 }
 
-/** Hook for future schema upgrades; currently a no-op at version 1. */
-function migrate(data: AppData): AppData {
-  if (data.version === APP_DATA_VERSION) return data
-  return { ...data, version: APP_DATA_VERSION }
-}
-
 export function normalizeAppData(value: unknown): AppData {
   if (!isRecord(value)) throw new Error('Export file is not a Pulse data object.')
   if (
@@ -188,6 +189,12 @@ export function normalizeAppData(value: unknown): AppData {
     !Array.isArray(value.customExercises)
   ) {
     throw new Error('Export file is missing required Pulse data fields.')
+  }
+  if (!Number.isInteger(value.version) || value.version !== APP_DATA_VERSION) {
+    const direction = value.version > APP_DATA_VERSION ? 'newer' : 'unsupported'
+    throw new Error(
+      `This backup uses ${direction} Pulse data version ${value.version}; this app supports version ${APP_DATA_VERSION}.`,
+    )
   }
 
   const metrics: BodyMetric[] = []
@@ -204,7 +211,7 @@ export function normalizeAppData(value: unknown): AppData {
   }
 
   const meta = isRecord(value.meta) ? value.meta : {}
-  return migrate({
+  return {
     version: value.version,
     profile: parseProfile(value.profile),
     workouts: value.workouts.map(parseWorkout).filter((workout): workout is Workout => workout !== null),
@@ -217,7 +224,7 @@ export function normalizeAppData(value: unknown): AppData {
       seededDemo: bool(meta.seededDemo),
       welcomeDismissed: bool(meta.welcomeDismissed),
     },
-  })
+  }
 }
 
 export function parseAppDataJson(json: string): AppData {
@@ -234,13 +241,16 @@ export class LocalStorageAdapter implements StorageAdapter {
     let raw: string | null
     try {
       raw = localStorage.getItem(STORAGE_KEY)
-    } catch {
-      return null // storage unavailable (private mode, blocked)
+    } catch (error) {
+      throw new StorageError(
+        'Pulse cannot read browser storage. Changes may last only until this tab is closed.',
+        { cause: error },
+      )
     }
     if (!raw) return null
     try {
       return normalizeAppData(JSON.parse(raw))
-    } catch {
+    } catch (error) {
       // Keep the corrupt blob around for manual recovery instead of silently losing it.
       try {
         localStorage.setItem(BACKUP_KEY, raw)
@@ -248,23 +258,29 @@ export class LocalStorageAdapter implements StorageAdapter {
       } catch {
         /* best effort */
       }
-      return null
+      throw new StorageError(
+        'Saved Pulse data was invalid and was moved to a recovery copy. Demo data is shown instead.',
+        { cause: error },
+      )
     }
   }
 
   save(data: AppData): void {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-    } catch {
-      // Quota exceeded or storage blocked — the in-memory copy keeps the session alive.
+    } catch (error) {
+      throw new StorageError(
+        'Pulse could not save this change. It is available in memory only; export JSON before closing the tab.',
+        { cause: error },
+      )
     }
   }
 
   clear(): void {
     try {
       localStorage.removeItem(STORAGE_KEY)
-    } catch {
-      /* ignore */
+    } catch (error) {
+      throw new StorageError('Pulse could not clear browser storage.', { cause: error })
     }
   }
 }
