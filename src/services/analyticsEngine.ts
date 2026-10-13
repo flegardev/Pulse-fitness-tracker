@@ -10,8 +10,8 @@ import {
  * Calculates Estimated One Rep Max (1RM) using Epley, Brzycki, and Lombardi formulas
  */
 export function calculateOneRepMax(weightKg: number, reps: number): OneRepMaxEstimate {
-  if (weightKg <= 0 || reps <= 0) {
-    throw new Error("Weight and reps must be positive non-zero numbers.");
+  if (!Number.isFinite(weightKg) || weightKg <= 0 || !Number.isSafeInteger(reps) || reps <= 0) {
+    throw new Error("Weight must be finite and positive; reps must be a positive whole number.");
   }
 
   if (reps === 1) {
@@ -108,7 +108,8 @@ export function calculateKarvonenHeartRateZones(
   restingHeartRateBpm: number,
   maxHeartRateBpm: number
 ): HeartRateZones {
-  if (restingHeartRateBpm >= maxHeartRateBpm || restingHeartRateBpm < 30 || maxHeartRateBpm > 240) {
+  if (!Number.isFinite(restingHeartRateBpm) || !Number.isFinite(maxHeartRateBpm) ||
+      restingHeartRateBpm >= maxHeartRateBpm || restingHeartRateBpm < 30 || maxHeartRateBpm > 240) {
     throw new Error("Invalid heart rate parameters supplied.");
   }
 

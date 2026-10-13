@@ -12,6 +12,13 @@ import {
 
 describe("Pulse Fitness Analytics Calculation Engine", () => {
   describe("One Rep Max (1RM) Estimations", () => {
+    it.each([NaN, Infinity, -Infinity])("rejects non-finite weight %s", (weight) => {
+      expect(() => calculateOneRepMax(weight, 5)).toThrow();
+    });
+
+    it.each([NaN, Infinity, -Infinity, 2.5])("rejects invalid repetition count %s", (reps) => {
+      expect(() => calculateOneRepMax(100, reps)).toThrow();
+    });
     it("should return the exact weight as 1RM when reps == 1", () => {
       const estimate = calculateOneRepMax(140, 1);
       expect(estimate.average1RMKg).toBe(140);
@@ -55,6 +62,10 @@ describe("Pulse Fitness Analytics Calculation Engine", () => {
   });
 
   describe("Karvonen Heart Rate Target Zones", () => {
+    it.each([NaN, Infinity, -Infinity])("rejects non-finite heart rates %s", (heartRate) => {
+      expect(() => calculateKarvonenHeartRateZones(heartRate, 200)).toThrow();
+      expect(() => calculateKarvonenHeartRateZones(60, heartRate)).toThrow();
+    });
     it("should compute 5 HR zones accurately from resting and max heart rate", () => {
       const zones = calculateKarvonenHeartRateZones(60, 200);
       // HRR = 140
